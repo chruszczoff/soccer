@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Typer 2025</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    <header class="bg-gray-800 p-4 shadow-md">
+        <h1 class="text-2xl font-bold">Typer 2025</h1>
+        <a href="/logout" class="text-blue-400 hover:underline float-right">Wyloguj</a>
+    </header>
+    <main class="container mx-auto p-4">
+        <section class="mb-8">
+            <h2 class="text-xl font-semibold mb-4">Trafność Typowań</h2>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                {% for league, stats in accuracies.items() %}
+                    <div class="bg-gray-800 p-4 rounded-lg shadow hover:shadow-lg transition duration-300">
+                        <h3 class="text-lg font-medium">{{ league }}</h3>
+                        <p>Trafione: {{ stats.correct }} / {{ stats.total }}</p>
+                        <p>Procent: {{ "%.1f"|format(stats.percent) }}%</p>
+                    </div>
+                {% endfor %}
+            </div>
+        </section>
+        <section>
+            <h2 class="text-xl font-semibold mb-4">Typy na Jutro</h2>
+            {% for pred in predictions %}
+                <div class="bg-gray-800 p-4 rounded-lg shadow mb-4 hover:shadow-lg transition duration-300">
+                    <h3 class="text-lg font-medium">{{ pred.league }}</h3>
+                    {% if pred.message %}
+                        <p>{{ pred.message }}</p>
+                    {% else %}
+                        <p class="mt-2">{{ pred.data.match }}</p>
+                        <p>{{ pred.data.team1_stats }}</p>
+                        <p>{{ pred.data.team2_stats }}</p>
+                        <p class="mt-2 text-green-400 font-bold">Typ: {{ pred.data.prediction }}</p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </section>
+    </main>
+</body>
+</html>
