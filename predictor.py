@@ -5,7 +5,7 @@ import json
 import os
 
 # Twój klucz API
-API_KEY = "WSTAW_TUTAJ_SWOJ_KLUCZ_API"
+API_KEY = "3720c6cadb21e814adcc6295ef4b91b1"
 
 BASE_URL = "https://v3.football.api-sports.io/"
 LEAGUE_IDS = {
@@ -16,7 +16,7 @@ LEAGUE_IDS = {
 
 app = Flask(__name__)
 app.secret_key = "super_tajny_klucz"  # Zmień na coś swojego
-PASSWORD = "twoje_haslo123"  # Zmień na własne hasło
+PASSWORD = "typertest123."  # Zmień na własne hasło
 DATA_FILE = "predictions.json"
 
 def get_team_id(team_name, league_id):
