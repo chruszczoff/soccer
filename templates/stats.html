@@ -3,30 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Typer 2025</title>
+    <title>Statystyki - Typer 2025</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     <header class="bg-gray-800 p-4 shadow-md flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Typer 2025</h1>
+        <h1 class="text-2xl font-bold">Typer 2025 - Statystyki</h1>
         <div>
-            <a href="/stats" class="text-blue-400 hover:underline mr-4">Statystyki</a>
+            <a href="/index" class="text-blue-400 hover:underline mr-4">Typy</a>
             <a href="/logout" class="text-blue-400 hover:underline">Wyloguj</a>
         </div>
     </header>
     <main class="container mx-auto p-4">
         <section class="mb-8">
-            <h2 class="text-xl font-semibold mb-4">Typy na Jutro</h2>
+            <h2 class="text-xl font-semibold mb-4">Historia Typów</h2>
             {% for pred in predictions %}
                 <div class="bg-gray-800 p-4 rounded-lg shadow mb-4 hover:shadow-lg transition duration-300">
-                    <h3 class="text-lg font-medium">{{ pred.league }}</h3>
-                    {% if pred.message %}
-                        <p>{{ pred.message }}</p>
-                    {% else %}
-                        <p class="mt-2">{{ pred.data.match }}</p>
-                        <p>{{ pred.data.team1_stats }}</p>
-                        <p>{{ pred.data.team2_stats }}</p>
-                        <p class="mt-2 text-green-400 font-bold">Typ: {{ pred.data.prediction }}</p>
+                    <h3 class="text-lg font-medium">{{ pred.league }} - {{ pred.date }}</h3>
+                    <p class="mt-2">{{ pred.match }}</p>
+                    <p>{{ pred.team1_stats }}</p>
+                    <p>{{ pred.team2_stats }}</p>
+                    <p class="mt-2 text-green-400 font-bold">Typ: {{ pred.prediction }}</p>
+                    {% if pred.result %}
+                        <p class="text-yellow-400">Wynik: {{ pred.result }}</p>
                     {% endif %}
                 </div>
             {% endfor %}

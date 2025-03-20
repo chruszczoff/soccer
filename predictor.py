@@ -5,9 +5,8 @@ import json
 import os
 
 # Twój klucz API
-API_KEY = "3720c6cadb21e814adcc6295ef4b91b1"
+API_KEY = "WSTAW_TUTAJ_SWOJ_KLUCZ_API"
 
-# Ustawienia
 BASE_URL = "https://v3.football.api-sports.io/"
 LEAGUE_IDS = {
     "Premier League": 39,
@@ -17,12 +16,9 @@ LEAGUE_IDS = {
 
 app = Flask(__name__)
 app.secret_key = "super_tajny_klucz"  # Zmień na coś swojego
-PASSWORD = "typertest123."  # Zmień na własne hasło
-
-# Plik do przechowywania typów i wyników
+PASSWORD = "twoje_haslo123"  # Zmień na własne hasło
 DATA_FILE = "predictions.json"
 
-# Funkcje pomocnicze (bez zmian)
 def get_team_id(team_name, league_id):
     headers = {"x-apisports-key": API_KEY}
     url = f"{BASE_URL}teams?league={league_id}&season=2024&name={team_name}"
@@ -56,7 +52,9 @@ def get_team_stats(team_name, league_id):
     return {
         "position": int(data["rank"]) if data["rank"] else 20,
         "goals_for": data["goals"]["for"]["total"]["total"],
-        "goals_against": data["goals"]["against"]["total"]["total"]
+        "goals_against": data["goals"]["against"]["total"]["total"],
+        "home_wins": data["fixtures"]["wins"]["home"]["total"],
+        "away_wins": data["fixtures"]["wins"]["away"]["total"]
     }
 
 def calculate_form(matches):
@@ -93,6 +91,13 @@ def calculate_goal_diff(goals_for, goals_against):
     diff = goals_for - goals_against
     return max(min(diff // 5, 10), -10)
 
+def calculate_home_away_points(stats, is_home_team):
+    # Punkty za wygrane domowe lub wyjazdowe (maks. 10 punktów)
+    if is_home_team:
+        return min(stats["home_wins"] * 2, 10)  # 2 pkt za wygraną domową
+    else:
+        return min(stats["away_wins"] * 2, 10)  # 2 pkt za wygraną wyjazdową
+
 def predict_winner(team1, team2, league_name):
     league_id = LEAGUE_IDS[league_name]
     matches1 = get_last_5_matches(team1, league_id)
@@ -110,13 +115,15 @@ def predict_winner(team1, team2, league_name):
     pos2 = calculate_position_points(stats2["position"])
     goal_diff1 = calculate_goal_diff(stats1["goals_for"], stats1["goals_against"])
     goal_diff2 = calculate_goal_diff(stats2["goals_for"], stats2["goals_against"])
-    total1 = form1 + h2h1 + pos1 + goal_diff1
-    total2 = form2 + h2h2 + pos2 + goal_diff2
+    home_away1 = calculate_home_away_points(stats1, True)  # team1 gra u siebie
+    home_away2 = calculate_home_away_points(stats2, False)  # team2 gra na wyjeździe
+    total1 = form1 + h2h1 + pos1 + goal_diff1 + home_away1
+    total2 = form2 + h2h2 + pos2 + goal_diff2 + home_away2
     prediction = team1 if total1 > total2 else team2 if total2 > total1 else "Remis"
     return {
         "match": f"{team1} vs {team2}",
-        "team1_stats": f"Forma={form1}, H2H={h2h1}, Pozycja={pos1}, Bramki={goal_diff1}, Łącznie={total1}",
-        "team2_stats": f"Forma={form2}, H2H={h2h2}, Pozycja={pos2}, Bramki={goal_diff2}, Łącznie={total2}",
+        "team1_stats": f"Forma={form1}, H2H={h2h1}, Pozycja={pos1}, Bramki={goal_diff1}, Dom/Wyjazd={home_away1}, Łącznie={total1}",
+        "team2_stats": f"Forma={form2}, H2H={h2h2}, Pozycja={pos2}, Bramki={goal_diff2}, Dom/Wyjazd={home_away2}, Łącznie={total2}",
         "prediction": prediction,
         "date": datetime.now().strftime("%Y-%m-%d"),
         "league": league_name
@@ -180,7 +187,6 @@ def calculate_accuracy(data):
         accuracies[key]["percent"] = (correct / total * 100) if total > 0 else 0
     return accuracies
 
-# Strona logowania
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -191,7 +197,6 @@ def login():
             return render_template("login.html", error="Nieprawidłowe hasło")
     return render_template("login.html", error=None)
 
-# Strona główna
 @app.route("/index")
 def index():
     if not session.get("logged_in"):
@@ -211,11 +216,19 @@ def index():
                     save_prediction(prediction)
                     predictions.append({"league": league, "data": prediction})
     
-    # Aktualizacja wyników i obliczanie trafności
     data = update_results()
     accuracies = calculate_accuracy(data)
     
     return render_template("index.html", predictions=predictions, accuracies=accuracies)
+
+@app.route("/stats")
+def stats():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+    
+    data = update_results()
+    accuracies = calculate_accuracy(data)
+    return render_template("stats.html", predictions=data.values(), accuracies=accuracies)
 
 @app.route("/logout")
 def logout():
@@ -223,4 +236,4 @@ def logout():
     return redirect(url_for("login"))
 
 if __name__ == "__main__":
-    app.run()
+    app.run(host="0.0.0.0", port=5000)
