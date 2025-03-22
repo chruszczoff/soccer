@@ -1,48 +1,118 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Typer 2025</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>Typer Piłkarski - Predykcje</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            min-height: 100vh;
+            color: #e0e0e0;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            padding: 20px 0;
+        }
+        h1 {
+            color: #00ffcc;
+            font-weight: 600;
+            margin: 0;
+        }
+        nav {
+            margin: 20px 0;
+        }
+        nav a {
+            color: #00cc99;
+            text-decoration: none;
+            margin: 0 15px;
+            font-size: 16px;
+            transition: color 0.3s;
+        }
+        nav a:hover {
+            color: #00ffcc;
+        }
+        .league-section {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
+        }
+        h2 {
+            color: #00ffcc;
+            font-weight: 600;
+            margin-top: 0;
+        }
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+        li {
+            background: rgba(255, 255, 255, 0.03);
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        li:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
+        }
+        .no-matches {
+            color: #999;
+            font-style: italic;
+        }
+        .stats {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
+        }
+    </style>
 </head>
-<body class="bg-gray-900 text-white min-h-screen">
-    <header class="bg-gray-800 p-4 shadow-md flex justify-between items-center">
-        <h1 class="text-2xl font-bold">Typer 2025</h1>
-        <div>
-            <a href="/stats" class="text-blue-400 hover:underline mr-4">Statystyki</a>
-            <a href="/logout" class="text-blue-400 hover:underline">Wyloguj</a>
-        </div>
-    </header>
-    <main class="container mx-auto p-4">
-        <section class="mb-8">
-            <h2 class="text-xl font-semibold mb-4">Typy na Jutro</h2>
-            {% for pred in predictions %}
-                <div class="bg-gray-800 p-4 rounded-lg shadow mb-4 hover:shadow-lg transition duration-300">
-                    <h3 class="text-lg font-medium">{{ pred.league }}</h3>
-                    {% if pred.message %}
-                        <p>{{ pred.message }}</p>
-                    {% else %}
-                        <p class="mt-2">{{ pred.data.match }}</p>
-                        <p>{{ pred.data.team1_stats }}</p>
-                        <p>{{ pred.data.team2_stats }}</p>
-                        <p class="mt-2 text-green-400 font-bold">Typ: {{ pred.data.prediction }}</p>
-                    {% endif %}
-                </div>
-            {% endfor %}
-        </section>
-        <section>
-            <h2 class="text-xl font-semibold mb-4">Trafność Typowań</h2>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                {% for league, stats in accuracies.items() %}
-                    <div class="bg-gray-800 p-4 rounded-lg shadow hover:shadow-lg transition duration-300">
-                        <h3 class="text-lg font-medium">{{ league }}</h3>
-                        <p>Trafione: {{ stats.correct }} / {{ stats.total }}</p>
-                        <p>Procent: {{ "%.1f"|format(stats.percent) }}%</p>
-                    </div>
-                {% endfor %}
+<body>
+    <div class="container">
+        <header>
+            <h1>Typer Piłkarski - Predykcje</h1>
+            <nav>
+                <a href="{{ url_for('index') }}">Typer</a>
+                <a href="{{ url_for('stats') }}">Statystyki</a>
+                <a href="{{ url_for('info') }}">Informacje</a>
+                <a href="{{ url_for('logout') }}">Wyloguj</a>
+            </nav>
+        </header>
+        
+        {% for league, predictions in predictions_by_league.items() %}
+            <div class="league-section">
+                <h2>{{ league }}</h2>
+                {% if predictions %}
+                    <ul>
+                        {% for prediction in predictions %}
+                            <li>{{ prediction.match_date }}: {{ prediction.match }} - Predykcja: {{ prediction.prediction }}</li>
+                        {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="no-matches">Brak meczów na wybraną datę.</p>
+                {% endif %}
             </div>
-        </section>
-    </main>
+        {% endfor %}
+        
+        <div class="stats">
+            <h2>Dokładność predykcji</h2>
+            <ul>
+                {% for league, stats in accuracies.items() %}
+                    <li>{{ league }}: {{ stats.correct }} / {{ stats.total }} ({{ stats.percent|round(2) }}%)</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
 </body>
 </html>

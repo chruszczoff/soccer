@@ -9,9 +9,13 @@ API_KEY = "3720c6cadb21e814adcc6295ef4b91b1"
 
 BASE_URL = "https://v3.football.api-sports.io/"
 LEAGUE_IDS = {
-    "Premier League": 39,
-    "La Liga": 140,
-    "Ekstraklasa": 106
+    "Premier League": 39,      # Anglia
+    "La Liga": 140,            # Hiszpania
+    "Ekstraklasa": 106,        # Polska
+    "Serie A": 135,            # Włochy
+    "Bundesliga": 78,          # Niemcy
+    "Ligue 1": 61,             # Francja
+    "UEFA Nations League": 5   # Liga Narodów UEFA
 }
 
 app = Flask(__name__)
@@ -21,7 +25,7 @@ DATA_FILE = "predictions.json"
 
 def get_team_id(team_name, league_id):
     headers = {"x-apisports-key": API_KEY}
-    url = f"{BASE_URL}teams?league={league_id}&season=2022&name={team_name}"
+    url = f"{BASE_URL}teams?league={league_id}&season=2024&name={team_name}"
     response = requests.get(url, headers=headers)
     data = response.json()
     if data["response"]:
@@ -46,15 +50,33 @@ def get_h2h_matches(team1_name, team2_name, league_id):
 def get_team_stats(team_name, league_id):
     team_id = get_team_id(team_name, league_id)
     headers = {"x-apisports-key": API_KEY}
-    url = f"{BASE_URL}teams/statistics?league={league_id}&season=2022&team={team_id}"
+    url = f"{BASE_URL}teams/statistics?league={league_id}&season=2024&team={team_id}"
     response = requests.get(url, headers=headers)
     data = response.json()["response"]
+    is_international = league_id == 5  # Tylko UEFA NL
+    
+    home_wins = data["fixtures"]["wins"]["home"]
+    away_wins = data["fixtures"]["wins"]["away"]
+    goals_for = data["goals"]["for"]["total"]
+    goals_against = data["goals"]["against"]["total"]
+    
+    if isinstance(home_wins, dict):  # Dla lig klubowych
+        home_wins = home_wins["total"] if home_wins["total"] is not None else 0
+        away_wins = away_wins["total"] if away_wins["total"] is not None else 0
+        goals_for = goals_for["total"] if goals_for["total"] is not None else 0
+        goals_against = goals_against["total"] if goals_against["total"] is not None else 0
+    else:  # Dla rozgrywek międzynarodowych
+        home_wins = home_wins if home_wins is not None else 0
+        away_wins = away_wins if away_wins is not None else 0
+        goals_for = (goals_for["home"] + goals_for["away"]) if goals_for else 0
+        goals_against = (goals_against["home"] + goals_against["away"]) if goals_against else 0
+
     return {
-        "position": int(data["rank"]) if data["rank"] else 20,
-        "goals_for": data["goals"]["for"]["total"]["total"],
-        "goals_against": data["goals"]["against"]["total"]["total"],
-        "home_wins": data["fixtures"]["wins"]["home"]["total"],
-        "away_wins": data["fixtures"]["wins"]["away"]["total"]
+        "position": 1 if is_international else (int(data["rank"]) if data.get("rank") else 20),
+        "goals_for": goals_for,
+        "goals_against": goals_against,
+        "home_wins": home_wins,
+        "away_wins": away_wins
     }
 
 def calculate_form(matches):
@@ -62,6 +84,8 @@ def calculate_form(matches):
     for match in matches:
         home_goals = match["goals"]["home"]
         away_goals = match["goals"]["away"]
+        if home_goals is None or away_goals is None:
+            continue
         if home_goals > away_goals:
             points += 3 if match["teams"]["home"]["winner"] else 0
         elif home_goals < away_goals:
@@ -76,6 +100,8 @@ def calculate_h2h(h2h_matches, team1_name):
         home_team = match["teams"]["home"]["name"]
         home_goals = match["goals"]["home"]
         away_goals = match["goals"]["away"]
+        if home_goals is None or away_goals is None:
+            continue
         if home_goals > away_goals:
             points += 3 if home_team == team1_name else 0
         elif home_goals < away_goals:
@@ -94,7 +120,7 @@ def calculate_goal_diff(goals_for, goals_against):
 def calculate_home_away_points(stats, is_home_team):
     return min(stats["home_wins"] * 2, 10) if is_home_team else min(stats["away_wins"] * 2, 10)
 
-def predict_winner(team1, team2, league_name):
+def predict_winner(team1, team2, league_name, match_date):
     league_id = LEAGUE_IDS[league_name]
     matches1 = get_last_5_matches(team1, league_id)
     matches2 = get_last_5_matches(team2, league_id)
@@ -121,13 +147,13 @@ def predict_winner(team1, team2, league_name):
         "team1_stats": f"Forma={form1}, H2H={h2h1}, Pozycja={pos1}, Bramki={goal_diff1}, Dom/Wyjazd={home_away1}, Łącznie={total1}",
         "team2_stats": f"Forma={form2}, H2H={h2h2}, Pozycja={pos2}, Bramki={goal_diff2}, Dom/Wyjazd={home_away2}, Łącznie={total2}",
         "prediction": prediction,
-        "date": datetime.now().strftime("%Y-%m-%d"),
+        "match_date": match_date,
         "league": league_name
     }
 
 def get_upcoming_matches(league_name):
     league_id = LEAGUE_IDS[league_name]
-    start_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")  # Jutro
+    start_date = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")  # Jutro: 2025-03-23
     season = "2024"
     headers = {"x-apisports-key": API_KEY}
     url = f"{BASE_URL}fixtures?league={league_id}&season={season}&date={start_date}"
@@ -144,7 +170,7 @@ def save_prediction(prediction):
     if os.path.exists(DATA_FILE):
         with open(DATA_FILE, "r") as f:
             data = json.load(f)
-    match_id = f"{prediction['date']}_{prediction['match']}"
+    match_id = f"{prediction['match_date']}_{prediction['match']}"
     data[match_id] = prediction
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
@@ -156,18 +182,19 @@ def update_results():
         data = json.load(f)
     for match_id, pred in data.items():
         if "result" not in pred:
-            date = pred["date"]
+            date = pred.get("match_date", pred.get("date"))
             league_id = LEAGUE_IDS[pred["league"]]
             headers = {"x-apisports-key": API_KEY}
-            url = f"{BASE_URL}fixtures?league={league_id}&season=2022&date={date}"
+            url = f"{BASE_URL}fixtures?league={league_id}&season=2024&date={date}"
             response = requests.get(url, headers=headers)
             fixtures = response.json()["response"]
             for fixture in fixtures:
                 if f"{fixture['teams']['home']['name']} vs {fixture['teams']['away']['name']}" == pred["match"]:
                     home_goals = fixture["goals"]["home"]
                     away_goals = fixture["goals"]["away"]
-                    result = fixture["teams"]["home"]["name"] if home_goals > away_goals else fixture["teams"]["away"]["name"] if away_goals > home_goals else "Remis"
-                    pred["result"] = result
+                    if home_goals is not None and away_goals is not None:
+                        result = fixture["teams"]["home"]["name"] if home_goals > away_goals else fixture["teams"]["away"]["name"] if away_goals > home_goals else "Remis"
+                        pred["result"] = result
                     break
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
@@ -205,24 +232,26 @@ def index():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
     
-    predictions = []
+    predictions_by_league = {}
     for league in LEAGUE_IDS.keys():
         matches = get_upcoming_matches(league)
-        if not matches:
-            predictions.append({"league": league, "message": "Brak meczów na wybraną datę."})
-        else:
+        if matches:
+            predictions_by_league[league] = []
             for match in matches:
                 team1 = match["teams"]["home"]["name"]
                 team2 = match["teams"]["away"]["name"]
-                prediction = predict_winner(team1, team2, league)
+                match_date = match["fixture"]["date"].split("T")[0]
+                prediction = predict_winner(team1, team2, league, match_date)
                 if prediction:
                     save_prediction(prediction)
-                    predictions.append({"league": league, "data": prediction})
+                    predictions_by_league[league].append(prediction)
+        else:
+            predictions_by_league[league] = None
     
     data = update_results()
     accuracies = calculate_accuracy(data)
     
-    return render_template("index.html", predictions=predictions, accuracies=accuracies)
+    return render_template("index.html", predictions_by_league=predictions_by_league, accuracies=accuracies)
 
 @app.route("/stats")
 def stats():
@@ -232,6 +261,12 @@ def stats():
     data = update_results()
     accuracies = calculate_accuracy(data)
     return render_template("stats.html", predictions=data.values(), accuracies=accuracies)
+
+@app.route("/info")
+def info():
+    if not session.get("logged_in"):
+        return redirect(url_for("login"))
+    return render_template("info.html")
 
 @app.route("/logout")
 def logout():

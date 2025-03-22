@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Typer Piłkarski - Statystyki</title>
+    <title>Typer Piłkarski - Informacje</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
     <style>
         body {
@@ -39,11 +39,10 @@
         nav a:hover {
             color: #00ffcc;
         }
-        .section {
+        .info-section {
             background: rgba(255, 255, 255, 0.05);
             padding: 20px;
             border-radius: 10px;
-            margin-bottom: 20px;
             box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
         }
         h2 {
@@ -56,22 +55,17 @@
             padding: 0;
         }
         li {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 15px;
             margin: 10px 0;
-            border-radius: 8px;
-            transition: transform 0.3s, box-shadow 0.3s;
         }
-        li:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
+        p {
+            line-height: 1.6;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Typer Piłkarski - Statystyki</h1>
+            <h1>Typer Piłkarski - Informacje</h1>
             <nav>
                 <a href="{{ url_for('index') }}">Typer</a>
                 <a href="{{ url_for('stats') }}">Statystyki</a>
@@ -80,22 +74,28 @@
             </nav>
         </header>
         
-        <div class="section">
-            <h2>Wszystkie predykcje</h2>
+        <div class="info-section">
+            <h2>Rozgrywki i analiza</h2>
+            <p>Typer Piłkarski analizuje mecze z następujących rozgrywek:</p>
             <ul>
-                {% for prediction in predictions %}
-                    <li>{{ prediction.match_date }}: {{ prediction.match }} ({{ prediction.league }}) - Predykcja: {{ prediction.prediction }}{% if prediction.result %} | Wynik: {{ prediction.result }}{% endif %}</li>
-                {% endfor %}
+                <li><strong>Premier League</strong> (Anglia) - Topowa liga klubowa.</li>
+                <li><strong>La Liga</strong> (Hiszpania) - Najlepsze kluby Hiszpanii.</li>
+                <li><strong>Ekstraklasa</strong> (Polska) - Polska liga krajowa.</li>
+                <li><strong>Serie A</strong> (Włochy) - Włoska piłka na najwyższym poziomie.</li>
+                <li><strong>Bundesliga</strong> (Niemcy) - Niemiecka precyzja w futbolu.</li>
+                <li><strong>Ligue 1</strong> (Francja) - Francuska liga z gwiazdami.</li>
+                <li><strong>UEFA Nations League</strong> - Rozgrywki międzynarodowe UEFA.</li>
             </ul>
-        </div>
-        
-        <div class="section">
-            <h2>Dokładność predykcji</h2>
+            <h2>Metoda analizy</h2>
+            <p>Predykcje są oparte na następujących czynnikach:</p>
             <ul>
-                {% for league, stats in accuracies.items() %}
-                    <li>{{ league }}: {{ stats.correct }} / {{ stats.total }} ({{ stats.percent|round(2) }}%)</li>
-                {% endfor %}
+                <li><strong>Forma</strong>: Punkty z ostatnich 5 meczów (3 za wygraną, 1 za remis).</li>
+                <li><strong>H2H</strong>: Wyniki bezpośrednich spotkań (ostatnie 5 meczów).</li>
+                <li><strong>Pozycja</strong>: Miejsce w tabeli (dla lig klubowych) lub stała wartość dla rozgrywek międzynarodowych.</li>
+                <li><strong>Różnica bramek</strong>: Skalowana różnica goli (max ±10 punktów).</li>
+                <li><strong>Dom/Wyjazd</strong>: Punkty za wygrane u siebie (dla gospodarza) lub na wyjeździe (dla gościa).</li>
             </ul>
+            <p>Łączny wynik decyduje o predykcji: wyższa suma punktów = zwycięzca, równość = remis.</p>
         </div>
     </div>
 </body>
