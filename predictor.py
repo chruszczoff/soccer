@@ -10,28 +10,26 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from io import BytesIO
 
-# Twój klucz API
 API_KEY = "3720c6cadb21e814adcc6295ef4b91b1"
-
 BASE_URL = "https://v3.football.api-sports.io/"
 LEAGUE_IDS = {
-    "Premier League": 39,      # Anglia
-    "La Liga": 140,            # Hiszpania
-    "Ekstraklasa": 106,        # Polska
-    "Serie A": 135,            # Włochy
-    "Bundesliga": 78,          # Niemcy
-    "Ligue 1": 61,             # Francja
-    "UEFA Nations League": 5,  # Liga Narodów UEFA
-    "World Cup Qualifiers": 32 # Kwalifikacje MŚ (UEFA)
+    "Premier League": 39,
+    "La Liga": 140,
+    "Ekstraklasa": 106,
+    "Serie A": 135,
+    "Bundesliga": 78,
+    "Ligue 1": 61,
+    "UEFA Nations League": 5,
+    "World Cup Qualifiers": 32
 }
 
 app = Flask(__name__)
-app.secret_key = "super_tajny_klucz"  # Zmień na coś swojego
-PASSWORD = "typertest123."  # Zmień na własne hasło
+app.secret_key = "super_tajny_klucz"
+PASSWORD = "typertest123."
 DATA_FILE = "predictions.json"
 
-# Rejestracja czcionki dla PDF
-pdfmetrics.registerFont(TTFont('DejaVuSans', 'fonts/DejaVuSans.ttf'))  # Ścieżka do czcionki
+# Rejestracja czcionki
+pdfmetrics.registerFont(TTFont('DejaVuSans', 'fonts/DejaVuSans.ttf'))
 
 def get_team_id(team_name, league_id):
     headers = {"x-apisports-key": API_KEY}
@@ -323,6 +321,9 @@ def index():
     data = update_results()
     accuracies = calculate_accuracy(data)
     
+    # Zapisz predykcje w sesji dla raportu
+    session['predictions_by_league'] = predictions_by_league
+    
     return render_template("index.html", predictions_by_league=predictions_by_league, accuracies=accuracies, current_date=current_date)
 
 @app.route("/stats")
@@ -345,21 +346,8 @@ def generate_report():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
     
-    predictions_by_league = {}
-    for league in LEAGUE_IDS.keys():
-        matches = get_upcoming_matches(league)
-        if matches:
-            predictions_by_league[league] = []
-            for match in matches:
-                team1 = match["teams"]["home"]["name"]
-                team2 = match["teams"]["away"]["name"]
-                match_date = match["fixture"]["date"].split("T")[0]
-                prediction = predict_winner(team1, team2, league, match_date)
-                if prediction:
-                    predictions_by_league[league].append(prediction)
-        else:
-            predictions_by_league[league] = None
-    
+    # Użyj predykcji z sesji zamiast generować nowe
+    predictions_by_league = session.get('predictions_by_league', {})
     data = update_results()
     accuracies = calculate_accuracy(data)
     
