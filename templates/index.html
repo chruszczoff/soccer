@@ -66,6 +66,10 @@
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
         }
+        .winner {
+            color: #00ffcc;
+            font-weight: 600;
+        }
         .no-matches {
             color: #999;
             font-style: italic;
@@ -75,6 +79,11 @@
             padding: 20px;
             border-radius: 10px;
             box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
+        }
+        .date {
+            color: #00cc99;
+            font-size: 16px;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -86,6 +95,7 @@
                 <a href="{{ url_for('index') }}">Typer</a>
                 <a href="{{ url_for('stats') }}">Statystyki</a>
                 <a href="{{ url_for('info') }}">Informacje</a>
+                <a href="{{ url_for('generate_report') }}">Generuj raport</a>
                 <a href="{{ url_for('logout') }}">Wyloguj</a>
             </nav>
         </header>
@@ -94,9 +104,20 @@
             <div class="league-section">
                 <h2>{{ league }}</h2>
                 {% if predictions %}
+                    <div class="date">Data meczów: {{ current_date }}</div>
                     <ul>
                         {% for prediction in predictions %}
-                            <li>{{ prediction.match_date }}: {{ prediction.match }} - Predykcja: {{ prediction.prediction }}</li>
+                            {% set max_pred = prediction.prediction | dictsort(by='value') | last %}
+                            <li>{{ prediction.match }} - 
+                                {% for key, value in prediction.prediction.items() %}
+                                    {% if key == max_pred.0 %}
+                                        <span class="winner">{{ key }}: {{ value }}%</span>
+                                    {% else %}
+                                        {{ key }}: {{ value }}%
+                                    {% endif %}
+                                    {% if not loop.last %}, {% endif %}
+                                {% endfor %}
+                            </li>
                         {% endfor %}
                     </ul>
                 {% else %}

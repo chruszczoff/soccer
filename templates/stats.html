@@ -66,6 +66,10 @@
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
         }
+        .winner {
+            color: #00ffcc;
+            font-weight: 600;
+        }
     </style>
 </head>
 <body>
@@ -76,6 +80,7 @@
                 <a href="{{ url_for('index') }}">Typer</a>
                 <a href="{{ url_for('stats') }}">Statystyki</a>
                 <a href="{{ url_for('info') }}">Informacje</a>
+                <a href="{{ url_for('generate_report') }}">Generuj raport</a>
                 <a href="{{ url_for('logout') }}">Wyloguj</a>
             </nav>
         </header>
@@ -84,7 +89,18 @@
             <h2>Wszystkie predykcje</h2>
             <ul>
                 {% for prediction in predictions %}
-                    <li>{{ prediction.match_date }}: {{ prediction.match }} ({{ prediction.league }}) - Predykcja: {{ prediction.prediction }}{% if prediction.result %} | Wynik: {{ prediction.result }}{% endif %}</li>
+                    {% set max_pred = prediction.prediction | dictsort(by='value') | last %}
+                    <li>{{ prediction.match_date }}: {{ prediction.match }} ({{ prediction.league }}) - 
+                        {% for key, value in prediction.prediction.items() %}
+                            {% if key == max_pred.0 %}
+                                <span class="winner">{{ key }}: {{ value }}%</span>
+                            {% else %}
+                                {{ key }}: {{ value }}%
+                            {% endif %}
+                            {% if not loop.last %}, {% endif %}
+                        {% endfor %}
+                        {% if prediction.result %} | Wynik: {{ prediction.result }}{% endif %}
+                    </li>
                 {% endfor %}
             </ul>
         </div>
