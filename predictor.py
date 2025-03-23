@@ -28,7 +28,6 @@ app.secret_key = "super_tajny_klucz"
 PASSWORD = "typertest123."
 DATA_FILE = "predictions.json"
 
-# Rejestracja czcionki
 pdfmetrics.registerFont(TTFont('DejaVuSans', 'fonts/DejaVuSans.ttf'))
 
 def get_team_id(team_name, league_id):
@@ -212,11 +211,23 @@ def predict_winner(team1, team2, league_name, match_date):
     else:
         prediction = {team1: 20 - diff//2, "Draw": 20, team2: 60 + diff//2}
     
+    # Dodajemy szczegóły analizy
+    analysis = {
+        "form": {team1: round(form1, 2), team2: round(form2, 2)},
+        "streak": {team1: streak1, team2: streak2},
+        "h2h": {team1: h2h1, team2: h2h2},
+        "position": {team1: pos1, team2: pos2},
+        "goal_trend": {team1: round(goal_trend1, 2), team2: round(goal_trend2, 2)},
+        "home_away": {team1: home_away1, team2: home_away2},
+        "total": {team1: round(total1, 2), team2: round(total2, 2)}
+    }
+    
     return {
         "match": f"{team1} vs {team2}",
         "prediction": prediction,
         "match_date": match_date,
-        "league": league_name
+        "league": league_name,
+        "analysis": analysis
     }
 
 def get_upcoming_matches(league_name):
@@ -321,7 +332,6 @@ def index():
     data = update_results()
     accuracies = calculate_accuracy(data)
     
-    # Zapisz predykcje w sesji dla raportu
     session['predictions_by_league'] = predictions_by_league
     
     return render_template("index.html", predictions_by_league=predictions_by_league, accuracies=accuracies, current_date=current_date)
@@ -346,7 +356,6 @@ def generate_report():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
     
-    # Użyj predykcji z sesji zamiast generować nowe
     predictions_by_league = session.get('predictions_by_league', {})
     data = update_results()
     accuracies = calculate_accuracy(data)

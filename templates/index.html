@@ -55,14 +55,15 @@
             list-style-type: none;
             padding: 0;
         }
-        li {
+        .match-item {
             background: rgba(255, 255, 255, 0.03);
             padding: 15px;
             margin: 10px 0;
             border-radius: 8px;
             transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
         }
-        li:hover {
+        .match-item:hover {
             transform: translateY(-5px);
             box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
         }
@@ -85,7 +86,30 @@
             font-size: 16px;
             margin-bottom: 10px;
         }
+        .analysis {
+            display: none;
+            background: rgba(0, 0, 0, 0.2);
+            padding: 15px;
+            margin-top: 10px;
+            border-radius: 8px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .analysis.active {
+            display: block;
+        }
     </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const matchItems = document.querySelectorAll('.match-item');
+            matchItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const analysis = this.querySelector('.analysis');
+                    analysis.classList.toggle('active');
+                });
+            });
+        });
+    </script>
 </head>
 <body>
     <div class="container">
@@ -108,7 +132,10 @@
                     <ul>
                         {% for prediction in predictions %}
                             {% set max_pred = prediction.prediction | dictsort(by='value') | last %}
-                            <li>{{ prediction.match }} - 
+                            {% set team1 = prediction.match.split(' vs ')[0] %}
+                            {% set team2 = prediction.match.split(' vs ')[1] %}
+                            <li class="match-item">
+                                {{ prediction.match }} - 
                                 {% for key, value in prediction.prediction.items() %}
                                     {% if key == max_pred.0 %}
                                         <span class="winner">{{ key }}: {{ value }}%</span>
@@ -117,6 +144,16 @@
                                     {% endif %}
                                     {% if not loop.last %}, {% endif %}
                                 {% endfor %}
+                                <div class="analysis">
+                                    <strong>Analiza meczu:</strong><br>
+                                    Forma: {{ team1 }}: {{ prediction.analysis.form[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.form[team2] }} pkt<br>
+                                    Seria: {{ team1 }}: {{ prediction.analysis.streak[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.streak[team2] }} pkt<br>
+                                    H2H: {{ team1 }}: {{ prediction.analysis.h2h[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.h2h[team2] }} pkt<br>
+                                    Pozycja: {{ team1 }}: {{ prediction.analysis.position[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.position[team2] }} pkt<br>
+                                    Tendencje bramkowe: {{ team1 }}: {{ prediction.analysis.goal_trend[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.goal_trend[team2] }} pkt<br>
+                                    Dom/Wyjazd: {{ team1 }}: {{ prediction.analysis.home_away[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.home_away[team2] }} pkt<br>
+                                    <strong>Łącznie: {{ team1 }}: {{ prediction.analysis.total[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.total[team2] }} pkt</strong>
+                                </div>
                             </li>
                         {% endfor %}
                     </ul>
