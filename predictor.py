@@ -9,8 +9,9 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from io import BytesIO
+import pytz  # Dodajemy bibliotekę do obsługi stref czasowych
 
-API_KEY = "3720c6cadb21e814adcc6295ef4b91b1"  # Zastąp swoim kluczem API
+API_KEY = "3720c6cadb21e814adcc6295ef4b91b1"
 BASE_URL = "https://v3.football.api-sports.io/"
 LEAGUE_IDS = {
     "Premier League": 39,
@@ -24,11 +25,10 @@ LEAGUE_IDS = {
 }
 
 app = Flask(__name__)
-app.secret_key = "super_tajny_klucz"  # Zmień na coś swojego
-PASSWORD = "typertest123."  # Zmień na własne hasło
+app.secret_key = "super_tajny_klucz"
+PASSWORD = "typertest123."
 DATA_FILE = "predictions.json"
 
-# Rejestracja czcionki dla PDF
 pdfmetrics.registerFont(TTFont('DejaVuSans', 'fonts/DejaVuSans.ttf'))
 
 def get_team_id(team_name, league_id):
@@ -250,9 +250,18 @@ def save_prediction(prediction):
         with open(DATA_FILE, "r") as f:
             data = json.load(f)
     match_id = f"{prediction['match_date']}_{prediction['match']}"
-    data[match_id] = prediction
-    with open(DATA_FILE, "w") as f:
-        json.dump(data, f, indent=4)
+    if match_id not in data:
+        data[match_id] = prediction
+        with open(DATA_FILE, "w") as f:
+            json.dump(data, f, indent=4)
+
+def load_prediction(match_date, match, league):
+    if not os.path.exists(DATA_FILE):
+        return None
+    with open(DATA_FILE, "r") as f:
+        data = json.load(f)
+    match_id = f"{match_date}_{match}"
+    return data.get(match_id)
 
 def update_results():
     if not os.path.exists(DATA_FILE):
@@ -314,6 +323,8 @@ def index():
     
     predictions_by_league = {}
     current_date = datetime.now().strftime("%Y-%m-%d")
+    current_time = datetime.now(pytz.UTC)  # Ustawiamy UTC, aby było zgodne z API
+    
     for league in LEAGUE_IDS.keys():
         matches = get_upcoming_matches(league)
         if matches:
@@ -322,10 +333,16 @@ def index():
                 team1 = match["teams"]["home"]["name"]
                 team2 = match["teams"]["away"]["name"]
                 match_date = match["fixture"]["date"].split("T")[0]
-                prediction = predict_winner(team1, team2, league, match_date)
-                if prediction:
-                    save_prediction(prediction)
-                    predictions_by_league[league].append(prediction)
+                match_time = datetime.strptime(match["fixture"]["date"], "%Y-%m-%dT%H:%M:%S%z")
+                
+                existing_pred = load_prediction(match_date, f"{team1} vs {team2}", league)
+                if existing_pred and match_time <= current_time:
+                    predictions_by_league[league].append(existing_pred)
+                else:
+                    prediction = predict_winner(team1, team2, league, match_date)
+                    if prediction:
+                        save_prediction(prediction)
+                        predictions_by_league[league].append(prediction)
         else:
             predictions_by_league[league] = None
     
