@@ -10,7 +10,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from io import BytesIO
 
-API_KEY = "3720c6cadb21e814adcc6295ef4b91b1"
+API_KEY = "3720c6cadb21e814adcc6295ef4b91b1"  # Zastąp swoim kluczem API
 BASE_URL = "https://v3.football.api-sports.io/"
 LEAGUE_IDS = {
     "Premier League": 39,
@@ -24,10 +24,11 @@ LEAGUE_IDS = {
 }
 
 app = Flask(__name__)
-app.secret_key = "super_tajny_klucz"
-PASSWORD = "typertest123."
+app.secret_key = "super_tajny_klucz"  # Zmień na coś swojego
+PASSWORD = "typertest123."  # Zmień na własne hasło
 DATA_FILE = "predictions.json"
 
+# Rejestracja czcionki dla PDF
 pdfmetrics.registerFont(TTFont('DejaVuSans', 'fonts/DejaVuSans.ttf'))
 
 def get_team_id(team_name, league_id):
@@ -211,7 +212,6 @@ def predict_winner(team1, team2, league_name, match_date):
     else:
         prediction = {team1: 20 - diff//2, "Draw": 20, team2: 60 + diff//2}
     
-    # Dodajemy szczegóły analizy
     analysis = {
         "form": {team1: round(form1, 2), team2: round(form2, 2)},
         "streak": {team1: streak1, team2: streak2},
@@ -380,8 +380,9 @@ def generate_report():
         elements.append(Paragraph(league, styles['Heading3']))
         if predictions:
             for pred in predictions:
-                max_pred = max(pred["prediction"], key=pred["prediction"].get)
-                pred_str = f"{pred['match']} - {max_pred} ({pred['prediction'][max_pred]}%)"
+                pred_str = f"{pred['match']} - "
+                pred_items = [f"{key}: {value}%" for key, value in pred['prediction'].items()]
+                pred_str += ", ".join(pred_items)
                 elements.append(Paragraph(pred_str, styles['Normal']))
         else:
             elements.append(Paragraph("Brak meczów", styles['Normal']))
