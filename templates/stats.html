@@ -1,118 +1,54 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Typer Piłkarski - Statystyki</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            min-height: 100vh;
-            color: #e0e0e0;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        header {
-            text-align: center;
-            padding: 20px 0;
-        }
-        h1 {
-            color: #00ffcc;
-            font-weight: 600;
-            margin: 0;
-        }
-        nav {
-            margin: 20px 0;
-        }
-        nav a {
-            color: #00cc99;
-            text-decoration: none;
-            margin: 0 15px;
-            font-size: 16px;
-            transition: color 0.3s;
-        }
-        nav a:hover {
-            color: #00ffcc;
-        }
-        .section {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
-        }
-        h2 {
-            color: #00ffcc;
-            font-weight: 600;
-            margin-top: 0;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        li {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        li:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
-        }
-        .winner {
-            color: #00ffcc;
-            font-weight: 600;
-        }
-    </style>
+    <title>Statystyki</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Typer Piłkarski - Statystyki</h1>
-            <nav>
-                <a href="{{ url_for('index') }}">Typer</a>
-                <a href="{{ url_for('stats') }}">Statystyki</a>
-                <a href="{{ url_for('info') }}">Informacje</a>
-                <a href="{{ url_for('generate_report') }}">Generuj raport</a>
-                <a href="{{ url_for('logout') }}">Wyloguj</a>
-            </nav>
-        </header>
-        
-        <div class="section">
-            <h2>Wszystkie predykcje</h2>
-            <ul>
-                {% for prediction in predictions %}
-                    {% set max_pred = prediction.prediction | dictsort(by='value') | last %}
-                    <li>{{ prediction.match_date }}: {{ prediction.match }} ({{ prediction.league }}) - 
-                        {% for key, value in prediction.prediction.items() %}
-                            {% if key == max_pred.0 %}
-                                <span class="winner">{{ key }}: {{ value }}%</span>
-                            {% else %}
-                                {{ key }}: {{ value }}%
-                            {% endif %}
-                            {% if not loop.last %}, {% endif %}
+    <h1>Statystyki</h1>
+    <nav>
+        <a href="{{ url_for('index') }}">Powrót</a> | 
+        <a href="{{ url_for('generate_report') }}">Pobierz raport PDF</a> | 
+        <a href="{{ url_for('info') }}">Info</a> | 
+        <a href="{{ url_for('logout') }}">Wyloguj</a>
+    </nav>
+    
+    <h2>Skuteczność</h2>
+    <ul>
+        {% for league, stats in accuracies.items() %}
+            <li>{{ league }}: {{ stats.correct }}/{{ stats.total }} ({{ stats.percent|round(2) }}%)</li>
+        {% endfor %}
+    </ul>
+    
+    <h2>Historia typowań</h2>
+    {% if history %}
+        <table border="1">
+            <tr>
+                <th>Mecz</th>
+                <th>Typ</th>
+                <th>Wynik</th>
+                <th>Liga</th>
+                <th>Data</th>
+                <th>Czas zapisu</th>
+            </tr>
+            {% for match_id, entry in history.items() %}
+                {% set max_pred = entry.prediction|items|max(attribute='1')|first %}
+                <tr class="{% if entry.result and max_pred == entry.result %}correct{% elif entry.result %}incorrect{% endif %}">
+                    <td>{{ entry.match }}</td>
+                    <td>
+                        {% for key, value in entry.prediction.items() %}
+                            {{ key }}: {{ value }}%{% if not loop.last %}, {% endif %}
                         {% endfor %}
-                        {% if prediction.result %} | Wynik: {{ prediction.result }}{% endif %}
-                    </li>
-                {% endfor %}
-            </ul>
-        </div>
-        
-        <div class="section">
-            <h2>Dokładność predykcji</h2>
-            <ul>
-                {% for league, stats in accuracies.items() %}
-                    <li>{{ league }}: {{ stats.correct }} / {{ stats.total }} ({{ stats.percent|round(2) }}%)</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
+                    </td>
+                    <td>{{ entry.result|default('Brak') }}</td>
+                    <td>{{ entry.league }}</td>
+                    <td>{{ entry.date }}</td>
+                    <td>{{ entry.timestamp }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p>Brak historii typowań</p>
+    {% endif %}
 </body>
 </html>
