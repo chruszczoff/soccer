@@ -1,93 +1,44 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Typer Piłkarski - Informacje</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            min-height: 100vh;
-            color: #e0e0e0;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        header {
-            text-align: center;
-            padding: 20px 0;
-        }
-        h1 {
-            color: #00ffcc;
-            font-weight: 600;
-            margin: 0;
-        }
-        nav {
-            margin: 20px 0;
-        }
-        nav a {
-            color: #00cc99;
-            text-decoration: none;
-            margin: 0 15px;
-            font-size: 16px;
-            transition: color 0.3s;
-        }
-        nav a:hover {
-            color: #00ffcc;
-        }
-        .info-section {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
-        }
-        h2 {
-            color: #00ffcc;
-            font-weight: 600;
-            margin-top: 0;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        li {
-            margin: 10px 0;
-        }
-        p {
-            line-height: 1.6;
-        }
-    </style>
+    <title>Informacje</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Typer Piłkarski - Informacje</h1>
-            <nav>
-                <a href="{{ url_for('index') }}">Typer</a>
-                <a href="{{ url_for('stats') }}">Statystyki</a>
-                <a href="{{ url_for('info') }}">Informacje</a>
-                <a href="{{ url_for('generate_report') }}">Generuj raport</a>
-                <a href="{{ url_for('logout') }}">Wyloguj</a>
-            </nav>
-        </header>
+    <h1>Informacje</h1>
+    <nav>
+        <a href="{{ url_for('index') }}">Powrót</a> | 
+        <a href="{{ url_for('generate_report') }}">Pobierz raport PDF</a> | 
+        <a href="{{ url_for('stats') }}">Statystyki</a> | 
+        <a href="{{ url_for('logout') }}">Wyloguj</a>
+    </nav>
+    
+    <div class="info-container">
+        <h2>O aplikacji</h2>
+        <p>Typer Piłkarski to zaawansowane narzędzie do przewidywania wyników meczów piłkarskich, oparte na danych z API football-api-sports.io. Analizujemy statystyki drużyn i generujemy predykcje, które pomagają zrozumieć szanse na wygraną, remis lub przegraną.</p>
         
-        <div class="info-section">
-            <h2>Metoda analizy</h2>
-            <p>Predykcje są oparte na następujących czynnikach:</p>
-            <ul>
-                <li><strong>Forma</strong>: Punkty z ostatnich 5 meczów (3 za wygraną, 1 za remis), ważone siłą przeciwnika i malejącą wagą dla nowszych meczów.</li>
-                <li><strong>Trendy</strong>: Bonus (+5) za passę 3+ wygranych, kara (-3) za 2+ przegrane.</li>
-                <li><strong>H2H</strong>: Wyniki bezpośrednich spotkań (ostatnie 5 meczów), z rozróżnieniem dom/wyjazd.</li>
-                <li><strong>Pozycja</strong>: Miejsce w tabeli (dla lig klubowych) lub stała wartość dla rozgrywek międzynarodowych.</li>
-                <li><strong>Tendencje bramkowe</strong>: Średnia goli strzelonych (+5 pkt za gola) i straconych (-3 pkt za gola) na mecz.</li>
-                <li><strong>Dom/Wyjazd</strong>: Punkty za wygrane u siebie (dla gospodarza) lub na wyjeździe (dla gościa).</li>
-            </ul>
-            <p>Łączny wynik przekłada się na procentowe prawdopodobieństwo: różnica punktów określa szanse na wygraną lub remis.</p>
-        </div>
+        <h2>Jak działa nasza analiza?</h2>
+        <p>Nasza metoda przewidywania opiera się na wielowymiarowej analizie statystycznej, uwzględniającej kilka kluczowych czynników:</p>
+        <ul>
+            <li><strong>Forma drużyny (Weighted Form):</strong> Ocena ostatnich 5 meczów z wagami (1.5, 1.25, 1.0, 1.0, 1.0), gdzie ostatnie mecze mają większą wagę. Punkty (3 za wygraną, 1 za remis) są mnożone przez siłę przeciwnika (20 - pozycja w lidze), co daje wynik odzwierciedlający aktualną dyspozycję.</li>
+            <li><strong>Seria wyników (Streak):</strong> Analiza ostatnich 3 meczów pod kątem zwycięstw (dodaje +5 punktów przy 3 wygranych z rzędu) lub ostatnich 2 meczów pod kątem porażek (-3 punkty przy 2 przegranych z rzędu).</li>
+            <li><strong>Bezpośrednie starcia (H2H):</strong> Punkty z ostatnich 5 meczów między drużynami (3 za wygraną, 1 za remis), z uwzględnieniem przewagi gospodarza lub gościa.</li>
+            <li><strong>Pozycja w lidze (Position):</strong> Punkty obliczane jako (20 - pozycja + 1), gdzie wyższa pozycja w tabeli daje więcej punktów (max 20, min 1).</li>
+            <li><strong>Trend bramkowy (Goal Trend):</strong> Średnia goli strzelonych (max 10 punktów) minus średnia goli straconych (max -6 punktów), obliczona na podstawie wszystkich meczów w sezonie.</li>
+            <li><strong>Przewaga dom/wyjazd (Home/Away):</strong> Punkty za wygrane mecze domowe (dla gospodarza) lub wyjazdowe (dla gościa), maksymalnie 10 punktów (2 punkty za wygraną).</li>
+            <li><strong>Łączny wynik (Total):</strong> Suma wszystkich powyższych czynników tworzy końcowy wynik dla każdej drużyny. Różnica między wynikami decyduje o procentowych szansach: jeśli <5, szanse są wyrównane (40%/35%/25%); jeśli większa, faworyt dostaje 60% + połowa różnicy, przegrany 20% - połowa różnicy, remis 20%.</li>
+        </ul>
+        
+        <h2>Funkcjonalności</h2>
+        <ul>
+            <li>Ręczne pobieranie danych o nadchodzących meczach</li>
+            <li>Szczegółowe predykcje z analizą statystyczną</li>
+            <li>Historia typowań z wynikami po regulaminowym czasie gry</li>
+            <li>Raporty PDF z typami i skutecznością</li>
+        </ul>
+        
+        <h2>Kontakt</h2>
+        <p>W razie pytań lub sugestii, napisz do nas: <a href="mailto:support@typer.pl">support@typer.pl</a></p>
     </div>
 </body>
 </html>

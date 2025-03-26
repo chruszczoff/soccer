@@ -1,176 +1,60 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Typer Piłkarski - Predykcje</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #1a1a2e, #16213e);
-            min-height: 100vh;
-            color: #e0e0e0;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        header {
-            text-align: center;
-            padding: 20px 0;
-        }
-        h1 {
-            color: #00ffcc;
-            font-weight: 600;
-            margin: 0;
-        }
-        nav {
-            margin: 20px 0;
-        }
-        nav a {
-            color: #00cc99;
-            text-decoration: none;
-            margin: 0 15px;
-            font-size: 16px;
-            transition: color 0.3s;
-        }
-        nav a:hover {
-            color: #00ffcc;
-        }
-        .league-section {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
-        }
-        h2 {
-            color: #00ffcc;
-            font-weight: 600;
-            margin-top: 0;
-        }
-        ul {
-            list-style-type: none;
-            padding: 0;
-        }
-        .match-item {
-            background: rgba(255, 255, 255, 0.03);
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 8px;
-            transition: transform 0.3s, box-shadow 0.3s;
-            cursor: pointer;
-        }
-        .match-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 5px 15px rgba(0, 255, 204, 0.2);
-        }
-        .winner {
-            color: #00ffcc;
-            font-weight: 600;
-        }
-        .no-matches {
-            color: #999;
-            font-style: italic;
-        }
-        .stats {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0, 255, 204, 0.1);
-        }
-        .date {
-            color: #00cc99;
-            font-size: 16px;
-            margin-bottom: 10px;
-        }
-        .analysis {
-            display: none;
-            background: rgba(0, 0, 0, 0.2);
-            padding: 15px;
-            margin-top: 10px;
-            border-radius: 8px;
-            font-size: 14px;
-            line-height: 1.5;
-        }
-        .analysis.active {
-            display: block;
-        }
-    </style>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const matchItems = document.querySelectorAll('.match-item');
-            matchItems.forEach(item => {
-                item.addEventListener('click', function() {
-                    const analysis = this.querySelector('.analysis');
-                    analysis.classList.toggle('active');
-                });
-            });
-        });
-    </script>
+    <title>Typer Piłkarski</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
 <body>
-    <div class="container">
-        <header>
-            <h1>Typer Piłkarski - Predykcje</h1>
-            <nav>
-                <a href="{{ url_for('index') }}">Typer</a>
-                <a href="{{ url_for('stats') }}">Statystyki</a>
-                <a href="{{ url_for('info') }}">Informacje</a>
-                <a href="{{ url_for('generate_report') }}">Generuj raport</a>
-                <a href="{{ url_for('logout') }}">Wyloguj</a>
-            </nav>
-        </header>
-        
-        {% for league, predictions in predictions_by_league.items() %}
-            <div class="league-section">
-                <h2>{{ league }}</h2>
-                {% if predictions %}
-                    <div class="date">Data meczów: {{ current_date }}</div>
+    <h1>Typer Piłkarski</h1>
+    <p>Data: {{ current_date }}</p>
+    <form method="POST">
+        <button type="submit" name="fetch_data" value="1">Pobierz dane</button>
+    </form>
+    <nav>
+        <a href="{{ url_for('stats') }}">Statystyki</a> | 
+        <a href="{{ url_for('generate_report') }}">Pobierz raport PDF</a> | 
+        <a href="{{ url_for('info') }}">Info</a> | 
+        <a href="{{ url_for('logout') }}">Wyloguj</a>
+    </nav>
+    
+    {% for league, predictions in predictions_by_league.items() %}
+        <h2>{{ league }}</h2>
+        {% if predictions %}
+            {% for pred in predictions %}
+                <details>
+                    <summary>
+                        {{ pred.match }} - 
+                        <span class="prediction">
+                            {% for key, value in pred.prediction.items() %}
+                                {% if loop.index0 == 0 %}<span class="team1">{{ key }}: {{ value }}%</span>{% endif %}
+                                {% if loop.index0 == 1 %}<span class="draw">{{ key }}: {{ value }}%</span>{% endif %}
+                                {% if loop.index0 == 2 %}<span class="team2">{{ key }}: {{ value }}%</span>{% endif %}
+                                {% if not loop.last %}, {% endif %}
+                            {% endfor %}
+                        </span>
+                    </summary>
+                    <p>Analiza:</p>
                     <ul>
-                        {% for prediction in predictions %}
-                            {% set max_pred = prediction.prediction | dictsort(by='value') | last %}
-                            {% set team1 = prediction.match.split(' vs ')[0] %}
-                            {% set team2 = prediction.match.split(' vs ')[1] %}
-                            <li class="match-item">
-                                {{ prediction.match }} - 
-                                {% for key, value in prediction.prediction.items() %}
-                                    {% if key == max_pred.0 %}
-                                        <span class="winner">{{ key }}: {{ value }}%</span>
-                                    {% else %}
-                                        {{ key }}: {{ value }}%
-                                    {% endif %}
-                                    {% if not loop.last %}, {% endif %}
-                                {% endfor %}
-                                <div class="analysis">
-                                    <strong>Analiza meczu:</strong><br>
-                                    Forma: {{ team1 }}: {{ prediction.analysis.form[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.form[team2] }} pkt<br>
-                                    Seria: {{ team1 }}: {{ prediction.analysis.streak[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.streak[team2] }} pkt<br>
-                                    H2H: {{ team1 }}: {{ prediction.analysis.h2h[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.h2h[team2] }} pkt<br>
-                                    Pozycja: {{ team1 }}: {{ prediction.analysis.position[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.position[team2] }} pkt<br>
-                                    Tendencje bramkowe: {{ team1 }}: {{ prediction.analysis.goal_trend[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.goal_trend[team2] }} pkt<br>
-                                    Dom/Wyjazd: {{ team1 }}: {{ prediction.analysis.home_away[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.home_away[team2] }} pkt<br>
-                                    <strong>Łącznie: {{ team1 }}: {{ prediction.analysis.total[team1] }} pkt, {{ team2 }}: {{ prediction.analysis.total[team2] }} pkt</strong>
-                                </div>
-                            </li>
-                        {% endfor %}
+                        <li>Forma: {{ pred.analysis.form }}</li>
+                        <li>Seria: {{ pred.analysis.streak }}</li>
+                        <li>H2H: {{ pred.analysis.h2h }}</li>
+                        <li>Pozycja: {{ pred.analysis.position }}</li>
+                        <li>Trend goli: {{ pred.analysis.goal_trend }}</li>
+                        <li>Dom/Wyjazd: {{ pred.analysis.home_away }}</li>
+                        <li>Łącznie: {{ pred.analysis.total }}</li>
                     </ul>
-                {% else %}
-                    <p class="no-matches">Brak meczów na wybraną datę.</p>
-                {% endif %}
-            </div>
+                </details>
+            {% endfor %}
+        {% else %}
+            <p>Brak meczów</p>
+        {% endif %}
+    {% endfor %}
+    
+    <h2>Skuteczność</h2>
+    <ul>
+        {% for league, stats in accuracies.items() %}
+            <li>{{ league }}: {{ stats.correct }}/{{ stats.total }} ({{ stats.percent|round(2) }}%)</li>
         {% endfor %}
-        
-        <div class="stats">
-            <h2>Dokładność predykcji</h2>
-            <ul>
-                {% for league, stats in accuracies.items() %}
-                    <li>{{ league }}: {{ stats.correct }} / {{ stats.total }} ({{ stats.percent|round(2) }}%)</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </div>
+    </ul>
 </body>
 </html>

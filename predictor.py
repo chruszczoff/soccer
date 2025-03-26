@@ -9,7 +9,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from io import BytesIO
-import pytz  # Dodajemy bibliotekę do obsługi stref czasowych
+import pytz
 
 API_KEY = "3720c6cadb21e814adcc6295ef4b91b1"
 BASE_URL = "https://v3.football.api-sports.io/"
@@ -28,6 +28,7 @@ app = Flask(__name__)
 app.secret_key = "super_tajny_klucz"
 PASSWORD = "typertest123."
 DATA_FILE = "predictions.json"
+HISTORY_FILE = "prediction_history.json"  # Nowy plik dla historii typowań
 
 pdfmetrics.registerFont(TTFont('DejaVuSans', 'fonts/DejaVuSans.ttf'))
 
@@ -278,15 +279,34 @@ def update_results():
             fixtures = response.json()["response"]
             for fixture in fixtures:
                 if f"{fixture['teams']['home']['name']} vs {fixture['teams']['away']['name']}" == pred["match"]:
-                    home_goals = fixture["goals"]["home"]
-                    away_goals = fixture["goals"]["away"]
+                    # Bierzemy wynik po regulaminowym czasie (fulltime), ignorując dogrywki i karne
+                    home_goals = fixture["score"]["fulltime"]["home"]
+                    away_goals = fixture["score"]["fulltime"]["away"]
                     if home_goals is not None and away_goals is not None:
                         result = fixture["teams"]["home"]["name"] if home_goals > away_goals else fixture["teams"]["away"]["name"] if away_goals > home_goals else "Remis"
                         pred["result"] = result
+                        save_to_history(pred)  # Zapisujemy do historii po aktualizacji wyniku
                     break
     with open(DATA_FILE, "w") as f:
         json.dump(data, f, indent=4)
     return data
+
+def save_to_history(prediction):
+    history = {}
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r") as f:
+            history = json.load(f)
+    match_id = f"{prediction['match_date']}_{prediction['match']}"
+    history[match_id] = {
+        "match": prediction["match"],
+        "prediction": prediction["prediction"],
+        "result": prediction.get("result"),
+        "league": prediction["league"],
+        "date": prediction["match_date"],
+        "timestamp": datetime.now(pytz.UTC).isoformat()
+    }
+    with open(HISTORY_FILE, "w") as f:
+        json.dump(history, f, indent=4)
 
 def calculate_accuracy(data):
     accuracies = {league: {"correct": 0, "total": 0} for league in LEAGUE_IDS.keys()}
@@ -306,6 +326,12 @@ def calculate_accuracy(data):
         accuracies[key]["percent"] = (correct / total * 100) if total > 0 else 0
     return accuracies
 
+def load_history():
+    if not os.path.exists(HISTORY_FILE):
+        return {}
+    with open(HISTORY_FILE, "r") as f:
+        return json.load(f)
+
 @app.route("/", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
@@ -316,40 +342,39 @@ def login():
             return render_template("login.html", error="Nieprawidłowe hasło")
     return render_template("login.html", error=None)
 
-@app.route("/index")
+@app.route("/index", methods=["GET", "POST"])
 def index():
     if not session.get("logged_in"):
         return redirect(url_for("login"))
     
-    predictions_by_league = {}
+    predictions_by_league = session.get("predictions_by_league", {})
     current_date = datetime.now().strftime("%Y-%m-%d")
-    current_time = datetime.now(pytz.UTC)  # Ustawiamy UTC, aby było zgodne z API
+    accuracies = calculate_accuracy(update_results())
     
-    for league in LEAGUE_IDS.keys():
-        matches = get_upcoming_matches(league)
-        if matches:
-            predictions_by_league[league] = []
-            for match in matches:
-                team1 = match["teams"]["home"]["name"]
-                team2 = match["teams"]["away"]["name"]
-                match_date = match["fixture"]["date"].split("T")[0]
-                match_time = datetime.strptime(match["fixture"]["date"], "%Y-%m-%dT%H:%M:%S%z")
-                
-                existing_pred = load_prediction(match_date, f"{team1} vs {team2}", league)
-                if existing_pred and match_time <= current_time:
-                    predictions_by_league[league].append(existing_pred)
-                else:
-                    prediction = predict_winner(team1, team2, league, match_date)
-                    if prediction:
-                        save_prediction(prediction)
-                        predictions_by_league[league].append(prediction)
-        else:
-            predictions_by_league[league] = None
-    
-    data = update_results()
-    accuracies = calculate_accuracy(data)
-    
-    session['predictions_by_league'] = predictions_by_league
+    if request.method == "POST" and request.form.get("fetch_data"):
+        current_time = datetime.now(pytz.UTC)
+        predictions_by_league = {}
+        for league in LEAGUE_IDS.keys():
+            matches = get_upcoming_matches(league)
+            if matches:
+                predictions_by_league[league] = []
+                for match in matches:
+                    team1 = match["teams"]["home"]["name"]
+                    team2 = match["teams"]["away"]["name"]
+                    match_date = match["fixture"]["date"].split("T")[0]
+                    match_time = datetime.strptime(match["fixture"]["date"], "%Y-%m-%dT%H:%M:%S%z")
+                    
+                    existing_pred = load_prediction(match_date, f"{team1} vs {team2}", league)
+                    if existing_pred and match_time <= current_time:
+                        predictions_by_league[league].append(existing_pred)
+                    else:
+                        prediction = predict_winner(team1, team2, league, match_date)
+                        if prediction:
+                            save_prediction(prediction)
+                            predictions_by_league[league].append(prediction)
+            else:
+                predictions_by_league[league] = None
+        session["predictions_by_league"] = predictions_by_league
     
     return render_template("index.html", predictions_by_league=predictions_by_league, accuracies=accuracies, current_date=current_date)
 
@@ -360,7 +385,8 @@ def stats():
     
     data = update_results()
     accuracies = calculate_accuracy(data)
-    return render_template("stats.html", predictions=data.values(), accuracies=accuracies)
+    history = load_history()
+    return render_template("stats.html", predictions=data.values(), accuracies=accuracies, history=history)
 
 @app.route("/info")
 def info():
